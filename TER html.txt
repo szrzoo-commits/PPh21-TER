@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kalkulator PPh 21 TER, Gross, dan Gross-Up</title>
+  <style>
+    :root{
+      --bg1:#07111f;
+      --bg2:#0b1f3b;
+      --panel:rgba(11, 25, 48, .78);
+      --panel-2:rgba(18, 37, 69, .76);
+      --card:rgba(255,255,255,.06);
+      --card-strong:rgba(255,255,255,.09);
+      --accent:#f6c344;
+      --accent-2:#79e2b5;
+      --accent-3:#6fb7ff;
+      --text:#eef3ff;
+      --muted:#b5c3e2;
+      --line:rgba(255,255,255,.10);
+      --good:#5fe39a;
+      --bad:#ff7d86;
+      --shadow:0 18px 60px rgba(0,0,0,.26);
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at 15% 10%, rgba(246,195,68,.20), transparent 24%),
+        radial-gradient(circle at 85% 15%, rgba(111,183,255,.18), transparent 24%),
+        radial-gradient(circle at 80% 85%, rgba(121,226,181,.14), transparent 20%),
+        linear-gradient(180deg, var(--bg1), var(--bg2) 42%, #0a1630 100%);
+      min-height:100vh;
+    }
+    .bg-orb{
+      position:fixed; inset:auto;
+      width:320px; height:320px; border-radius:50%;
+      filter:blur(40px); opacity:.18; z-index:-1;
+      background:radial-gradient(circle, var(--accent), transparent 65%);
+      top:-80px; left:-120px;
+      pointer-events:none;
+    }
+    .bg-orb.b{ width:360px; height:360px; background:radial-gradient(circle, var(--accent-2), transparent 65%); top:30px; right:-120px; left:auto; }
+    .wrap{max-width:1440px;margin:0 auto;padding:22px}
+    .topbar{
+      display:flex; justify-content:space-between; align-items:center; gap:14px;
+      margin-bottom:18px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:12px;
+    }
+    .mark{
+      width:48px; height:48px; border-radius:16px;
+      background:linear-gradient(135deg, var(--accent), #ffd977);
+      box-shadow:0 10px 30px rgba(246,195,68,.25);
+      display:grid; place-items:center;
+      color:#111; font-weight:900; letter-spacing:.02em;
+    }
+    .brand h1{
+      margin:0; font-size:clamp(18px, 2vw, 24px); line-height:1.05;
+    }
+    .brand .mini{color:var(--muted); font-size:13px; margin-top:2px}
+    .chip-row{display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end}
+    .chip{
+      padding:9px 12px; border-radius:999px;
+      background:rgba(255,255,255,.06); border:1px solid var(--line);
+      color:var(--text); font-size:12px;
+      backdrop-filter: blur(10px);
+    }
+
+    .hero{
+      position:relative;
+      overflow:hidden;
+      background:
+        linear-gradient(135deg, rgba(246,195,68,.16), rgba(255,255,255,.04) 45%, rgba(111,183,255,.10)),
+        rgba(255,255,255,.03);
+      border:1px solid var(--line);
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      padding:28px;
+      margin-bottom:18px;
+    }
+    .hero::after{
+      content:"";
+      position:absolute; inset:auto -80px -100px auto;
+      width:320px; height:320px; border-radius:50%;
+      background:radial-gradient(circle, rgba(246,195,68,.25), transparent 60%);
+      filter:blur(10px);
+    }
+    .hero-grid{
+      position:relative; z-index:1;
+      display:grid; grid-template-columns:1.35fr .85fr; gap:18px; align-items:end;
+    }
+    .eyebrow{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 12px; border-radius:999px;
+      background:rgba(255,255,255,.08);
+      border:1px solid var(--line);
+      color:#fff; font-size:12px; letter-spacing:.03em;
+      text-transform:uppercase;
+    }
+    .eyebrow b{color:var(--accent)}
+    .hero h2{
+      margin:14px 0 10px;
+      font-size:clamp(30px, 4vw, 56px);
+      line-height:1.02;
+      letter-spacing:-.03em;
+    }
+    .hero p{
+      margin:0;
+      max-width:900px;
+      color:var(--muted);
+      line-height:1.65;
+      font-size:15px;
+    }
+    .hero-actions{
+      display:flex; gap:12px; flex-wrap:wrap; margin-top:18px;
+    }
+    .btn{
+      border:none; border-radius:16px;
+      padding:13px 16px;
+      font-weight:800;
+      cursor:pointer;
+      transition:.18s ease;
+      text-decoration:none;
+      display:inline-flex; align-items:center; gap:10px;
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{
+      background:linear-gradient(135deg, var(--accent), #ffe08c);
+      color:#101010; box-shadow:0 12px 26px rgba(246,195,68,.20);
+    }
+    .btn.secondary{
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      border:1px solid var(--line);
+    }
+    .hero-side{
+      display:grid; gap:12px;
+    }
+    .quick-card{
+      background:rgba(7,14,30,.42);
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:16px;
+      backdrop-filter: blur(14px);
+    }
+    .quick-card .t{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+    .quick-card .n{font-size:22px;font-weight:900;margin-top:6px}
+    .quick-card .s{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.5}
+    .highlight-strip{
+      margin-top:14px;
+      display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+    }
+    .hitem{
+      padding:12px 14px;
+      border-radius:18px;
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--line);
+      color:var(--text);
+      font-size:13px;
+      line-height:1.45;
+    }
+    .hitem b{color:var(--accent)}
+    .grid{
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap:18px;
+      align-items:start;
+    }
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:18px;
+      box-shadow:var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+    .card h3,.card h4{margin:0 0 14px 0}
+    .card h3{font-size:18px}
+    .section-title{
+      display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;
+    }
+    .section-title .left{
+      display:flex; align-items:center; gap:10px;
+    }
+    .dot{
+      width:12px;height:12px;border-radius:999px;background:var(--accent);
+      box-shadow:0 0 0 6px rgba(246,195,68,.12);
+    }
+    .tiny{font-size:12px;color:var(--muted)}
+    label{display:block;font-size:13px;color:var(--muted);margin:10px 0 6px}
+    input, select{
+      width:100%;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(8,15,32,.95);
+      color:var(--text);
+      outline:none;
+      transition:.16s ease;
+    }
+    input:focus, select:focus{
+      border-color:rgba(246,195,68,.85);
+      box-shadow:0 0 0 3px rgba(246,195,68,.12);
+    }
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .tabs{
+      display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;
+    }
+    .tab{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.05);
+      color:var(--text);
+      padding:11px 14px;
+      border-radius:999px;
+      cursor:pointer;
+      transition:.16s ease;
+    }
+    .tab.active{
+      background:linear-gradient(135deg, var(--accent), #ffd86a);
+      color:#101010; font-weight:900; border-color:transparent;
+    }
+    .panel{display:none}
+    .panel.active{display:block}
+    .summary{
+      display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:14px 0;
+    }
+    .metric{
+      background:rgba(255,255,255,.05);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:14px;
+    }
+    .metric .k{color:var(--muted);font-size:12px;margin-bottom:6px;line-height:1.3}
+    .metric .v{font-size:22px;font-weight:900;letter-spacing:-.02em}
+    .metric .s{font-size:12px;color:var(--muted);margin-top:4px}
+    .note{
+      margin-top:12px;
+      padding:14px 15px;
+      border-radius:16px;
+      background:linear-gradient(135deg, rgba(246,195,68,.16), rgba(121,226,181,.09));
+      border:1px solid rgba(246,195,68,.26);
+      color:#fff7d2;
+      line-height:1.6;
+    }
+    .compare{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-top:12px;
+    }
+    .compare .box{
+      border-radius:18px;
+      padding:14px;
+      background:rgba(255,255,255,.05);
+      border:1px solid var(--line);
+    }
+    .compare .box h4{margin:0 0 8px 0}
+    .compare .box p{margin:0;color:var(--muted);line-height:1.55;font-size:13px}
+    .table-wrap{
+      overflow:auto;
+      max-height:520px;
+      border-radius:18px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.03);
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:560px;
+    }
+    th,td{
+      padding:11px 10px;
+      border-bottom:1px solid var(--line);
+      text-align:right;
+      font-size:14px;
+    }
+    th:first-child, td:first-child{text-align:left}
+    th{
+      background:rgba(246,195,68,.13);
+      color:#fff;
+      position:sticky; top:0;
+      z-index:1;
+      backdrop-filter: blur(8px);
+    }
+    tr:last-child td{border-bottom:none}
+    .small{font-size:12px;color:var(--muted)}
+    .two{display:grid;grid-template-columns:1.18fr .82fr;gap:14px}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 11px;
+      border-radius:999px;
+      background:rgba(246,195,68,.11);
+      border:1px solid rgba(246,195,68,.25);
+      color:#ffe59d;
+      font-size:12px;
+      margin-bottom:10px;
+    }
+    .footer-note{
+      margin-top:14px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.55;
+    }
+    .month-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .month-item{
+      background:rgba(255,255,255,.04);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:10px;
+    }
+    .month-item .m{font-weight:800;margin-bottom:6px;color:#fff}
+    .month-item input{padding:10px 12px;border-radius:12px}
+    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    button.action{
+      background:linear-gradient(135deg, var(--accent), #ffe08b);
+      color:#111;
+      border:none;
+      border-radius:14px;
+      padding:12px 16px;
+      font-weight:900;
+      cursor:pointer;
+      box-shadow:0 12px 26px rgba(246,195,68,.18);
+    }
+    button.ghost{
+      background:transparent;
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px 16px;
+      cursor:pointer;
+    }
+    .calc-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      background:rgba(121,226,181,.12);
+      border:1px solid rgba(121,226,181,.22);
+      color:#dfffee;
+      font-size:12px;
+      margin-bottom:10px;
+    }
+    .bar{
+      height:10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      overflow:hidden;
+      margin-top:8px;
+    }
+    .bar > span{
+      display:block;
+      height:100%;
+      width:0%;
+      border-radius:999px;
+      background:linear-gradient(90deg, var(--accent-2), var(--accent));
+      transition:width .25s ease;
+    }
+    .legend{
+      display:flex;
+      justify-content:space-between;
+      font-size:12px;
+      color:var(--muted);
+      margin-top:6px;
+      gap:10px;
+    }
+    .sticky-summary{
+      display:none;
+      position:sticky;
+      top:12px;
+      z-index:20;
+      margin-top:14px;
+      border-radius:22px;
+      padding:12px 14px;
+      background:rgba(7,13,27,.82);
+      border:1px solid var(--line);
+      backdrop-filter: blur(10px);
+      box-shadow:var(--shadow);
+    }
+    .sticky-summary .line{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:10px;
+    }
+    .sticky-summary .mini{
+      font-size:12px;color:var(--muted);margin-bottom:2px;
+    }
+    .sticky-summary .val{font-weight:900}
+    @media (max-width: 1120px){
+      .grid,.two,.hero-grid,.compare{grid-template-columns:1fr}
+      .summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .month-grid{grid-template-columns:repeat(2,1fr)}
+      .highlight-strip{grid-template-columns:1fr}
+      .sticky-summary .line{grid-template-columns:repeat(2,1fr)}
+    }
+    @media (max-width: 640px){
+      .wrap{padding:14px}
+      .summary{grid-template-columns:1fr}
+      .month-grid{grid-template-columns:1fr}
+      .row{grid-template-columns:1fr}
+      .chip-row{justify-content:flex-start}
+      .sticky-summary .line{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-orb"></div>
+  <div class="bg-orb b"></div>
+
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="mark">P21</div>
+        <div>
+          <h1>Kalkulator PPh 21 TER, Gross, dan Gross-Up</h1>
+          <div class="mini">Simulasi payroll yang lebih ramah, visual, dan gampang dipahami.</div>
+        </div>
+      </div>
+      <div class="chip-row">
+        <div class="chip">TER 12 bulan</div>
+        <div class="chip">Gross</div>
+        <div class="chip">Gross-Up</div>
+        <div class="chip">PMK 168/2023</div>
+      </div>
+    </div>
+
+    <div class="hero">
+      <div class="hero-grid">
+        <div>
+          <span class="eyebrow">Bikin pajak terasa <b>lebih ringan</b>, bukan lebih menakutkan</span>
+          <h2>Hitung PPh 21 tanpa ribet, tanpa bikin karyawan panik.</h2>
+          <p>
+            Versi ini dibuat lebih menarik untuk user: tampilan bersih, kartu ringkasan yang jelas, tombol yang enak diklik,
+            dan perbandingan langsung antara <b>Gross</b> vs <b>Gross-Up</b>. Cocok untuk HR, payroll, dan simulasi pribadi.
+          </p>
+          <div class="hero-actions">
+            <a class="btn primary" href="#kalkulator">Mulai hitung sekarang</a>
+            <button class="btn secondary" onclick="fillExample()">Coba contoh cepat</button>
+          </div>
+          <div class="highlight-strip">
+            <div class="hitem"><b>Gross</b>: pajak dipotong dari gaji karyawan.</div>
+            <div class="hitem"><b>Gross-Up</b>: perusahaan kasih tunjangan pajak.</div>
+            <div class="hitem"><b>TER</b>: potong bulanan dibuat lebih sederhana.</div>
+          </div>
+        </div>
+        <div class="hero-side">
+          <div class="quick-card">
+            <div class="t">Fokus utama</div>
+            <div class="n">Ramah user</div>
+            <div class="s">Desain dibuat lebih modern supaya orang tidak merasa “berhadapan dengan pajak”, tapi seperti memakai alat bantu hitung yang nyaman.</div>
+          </div>
+          <div class="quick-card">
+            <div class="t">Status simulasi</div>
+            <div class="n" id="heroStatus">TER aktif</div>
+            <div class="s" id="heroStatusSub">Pilih PTKP, lalu sistem menyesuaikan tarif efektif otomatis.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sticky-summary" id="stickySummary">
+      <div class="line">
+        <div><div class="mini">Bruto setahun</div><div class="val" id="stickyGross">Rp0</div></div>
+        <div><div class="mini">PPh 21 TER</div><div class="val" id="stickyTax">Rp0</div></div>
+        <div><div class="mini">Net setahun</div><div class="val" id="stickyNet">Rp0</div></div>
+        <div><div class="mini">Selisih final</div><div class="val" id="stickyDiff">Rp0</div></div>
+      </div>
+    </div>
+
+    <div class="grid" id="kalkulator">
+      <div class="card">
+        <div class="section-title">
+          <div class="left">
+            <span class="dot"></span>
+            <h3>Input utama</h3>
+          </div>
+          <div class="tiny">Cepat, ringkas, dan bisa langsung dihitung</div>
+        </div>
+
+        <label>Mode kalkulasi</label>
+        <select id="mode">
+          <option value="ter">TER 12 Bulan</option>
+          <option value="gross">Gross</option>
+          <option value="grossup">Gross-Up</option>
+        </select>
+
+        <label>Status PTKP</label>
+        <select id="ptkp">
+          <option value="TK/0">TK/0</option>
+          <option value="TK/1">TK/1</option>
+          <option value="TK/2">TK/2</option>
+          <option value="TK/3">TK/3</option>
+          <option value="K/0">K/0</option>
+          <option value="K/1">K/1</option>
+          <option value="K/2">K/2</option>
+          <option value="K/3">K/3</option>
+        </select>
+
+        <label>Penghasilan bruto / target take-home per bulan (Rp)</label>
+        <input id="baseIncome" type="number" min="0" step="1000" value="10000000" />
+
+        <div id="grossupBox" style="display:none;">
+          <label>Penanggung pajak</label>
+          <select id="taxborne">
+            <option value="employee">Gross biasa (dipotong karyawan)</option>
+            <option value="company">Gross-Up (ditanggung perusahaan)</option>
+          </select>
+          <p class="small">Gross-Up akan mencari grossed-up salary yang membuat take-home employee mendekati target.</p>
+        </div>
+
+        <label>Penghasilan tambahan setahun (bonus/tunjangan, Rp)</label>
+        <input id="annualBonus" type="number" min="0" step="1000" value="0" />
+
+        <div class="btns">
+          <button class="action" onclick="recalc()">Hitung</button>
+          <button class="ghost" onclick="fillExample()">Isi contoh</button>
+          <button class="ghost" onclick="resetMonths()">Reset bulan</button>
+        </div>
+
+        <div class="note">
+          Pajak tidak harus terasa menakutkan. Gunakan mode yang paling pas:
+          <b>Gross</b> untuk potong normal, <b>Gross-Up</b> untuk tunjangan pajak, dan <b>TER</b> untuk simulasi 12 bulan.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="tabs">
+          <button class="tab active" data-tab="ter" onclick="switchTab('ter')">TER 12 Bulan</button>
+          <button class="tab" data-tab="gross" onclick="switchTab('gross')">Gross</button>
+          <button class="tab" data-tab="grossup" onclick="switchTab('grossup')">Gross-Up</button>
+        </div>
+
+        <div id="panel-ter" class="panel active">
+          <div class="summary">
+            <div class="metric"><div class="k">Total bruto setahun</div><div class="v" id="terAnnualGross">Rp0</div><div class="s">12 bulan + bonus</div></div>
+            <div class="metric"><div class="k">Total PPh 21 TER</div><div class="v" id="terAnnualTax">Rp0</div><div class="s">Akumulasi 12 bulan</div></div>
+            <div class="metric"><div class="k">Rata-rata tarif TER</div><div class="v" id="terAvgRate">0%</div><div class="s">Simulasi rata-rata</div></div>
+            <div class="metric"><div class="k">Net setahun</div><div class="v" id="terAnnualNet">Rp0</div><div class="s">Bruto - pajak</div></div>
+          </div>
+          <div class="two">
+            <div>
+              <div class="pill">Rincian 12 bulan</div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>Bulan</th><th>Bruto</th><th>TER</th><th>PPh 21</th><th>Net</th></tr>
+                  </thead>
+                  <tbody id="terTable"></tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <div class="pill">Rekonsiliasi tahunan</div>
+              <div class="metric" style="margin-bottom:12px"><div class="k">PPh setahun (Pasal 17)</div><div class="v" id="annualFinalTax">Rp0</div><div class="s">Hitung final setahun</div></div>
+              <div class="metric" style="margin-bottom:12px"><div class="k">Selisih TER vs final</div><div class="v" id="annualDiff">Rp0</div><div class="s">Positif = kurang/lebih potong</div></div>
+              <div class="metric" style="margin-bottom:12px"><div class="k">Tarif TER bulan ini</div><div class="v" id="currentTerRate">0%</div><div class="s" id="currentTerBand">Berdasarkan status PTKP</div></div>
+              <div class="compare">
+                <div class="box">
+                  <h4>Gross</h4>
+                  <p>Pajak diambil dari gaji. Simpel, jelas, dan paling sering dipakai untuk payroll normal.</p>
+                </div>
+                <div class="box">
+                  <h4>Gross-Up</h4>
+                  <p>Perusahaan menambah tunjangan pajak agar take-home karyawan tetap utuh.</p>
+                </div>
+              </div>
+              <div class="footer-note">Tabel TER diambil dari ringkasan PMK 168 Tahun 2023 yang Anda unggah. Kategori ditentukan oleh status PTKP.</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="panel-gross" class="panel">
+          <div class="summary">
+            <div class="metric"><div class="k">Gross bulanan</div><div class="v" id="grossGross">Rp0</div><div class="s">Pendapatan bruto</div></div>
+            <div class="metric"><div class="k">PPh 21 per bulan</div><div class="v" id="grossTax">Rp0</div><div class="s">Berdasarkan tarif tahunan</div></div>
+            <div class="metric"><div class="k">Take-home bulanan</div><div class="v" id="grossNet">Rp0</div><div class="s">Bruto - pajak</div></div>
+            <div class="metric"><div class="k">Total setahun</div><div class="v" id="grossAnnual">Rp0</div><div class="s">Estimasi 12 bulan</div></div>
+          </div>
+          <div class="note">Mode Gross cocok untuk simulasi ketika pajak memang dipotong dari gaji karyawan. Hasilnya langsung terlihat tanpa rumit.</div>
+        </div>
+
+        <div id="panel-grossup" class="panel">
+          <div class="summary">
+            <div class="metric"><div class="k">Target take-home</div><div class="v" id="guTarget">Rp0</div><div class="s">Yang ingin diterima</div></div>
+            <div class="metric"><div class="k">Grossed-up salary</div><div class="v" id="guGross">Rp0</div><div class="s">Hasil perhitungan</div></div>
+            <div class="metric"><div class="k">Tax allowance</div><div class="v" id="guAllowance">Rp0</div><div class="s">Tunjangan pajak</div></div>
+            <div class="metric"><div class="k">Biaya perusahaan</div><div class="v" id="guCost">Rp0</div><div class="s">Total cost employer</div></div>
+          </div>
+          <div class="note">Mode Gross-Up dibuat untuk skenario perusahaan yang ingin menanggung beban pajak agar karyawan tetap menerima net yang sama. Ini sering terasa paling “bersahabat” bagi user.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <div class="section-title">
+        <div class="left">
+          <span class="dot" style="background:var(--accent-2);box-shadow:0 0 0 6px rgba(121,226,181,.10)"></span>
+          <h3>Input penghasilan per bulan (opsional)</h3>
+        </div>
+        <div class="tiny">Kalau kosong, sistem pakai angka bruto bulanan utama untuk semua bulan</div>
+      </div>
+      <div class="month-grid" id="monthGrid"></div>
+      <div class="bar" aria-hidden="true"><span id="progressBar"></span></div>
+      <div class="legend"><span>Ringan</span><span id="barLabel">Beban pajak relatif</span><span>Berat</span></div>
+    </div>
+  </div>
+
+<script>
+  const ptkpMap = {
+    'TK/0': 54000000,
+    'TK/1': 58500000,
+    'TK/2': 63000000,
+    'TK/3': 67500000,
+    'K/0': 58500000,
+    'K/1': 63000000,
+    'K/2': 67500000,
+    'K/3': 72000000,
+  };
+
+  const terTables = {
+    'TK/0': [
+      [5400000,0],[5650000,0.0025],[5950000,0.005],[6300000,0.0075],[6750000,0.01],[7500000,0.0125],[8550000,0.015],[9650000,0.0175],[10050000,0.02],[10350000,0.0225],[10700000,0.025],[11050000,0.03],[11600000,0.035],[12500000,0.04],[13750000,0.05],[15100000,0.06],[16950000,0.07],[19750000,0.08],[24150000,0.09],[26450000,0.10],[28000000,0.11],[30050000,0.12],[32400000,0.13],[35400000,0.14],[39100000,0.15],[43850000,0.16],[47800000,0.17],[51400000,0.18],[56300000,0.19],[62200000,0.20],[68600000,0.21],[77500000,0.22],[89000000,0.23],[103000000,0.24],[125000000,0.25],[157000000,0.26],[206000000,0.27],[337000000,0.28],[454000000,0.29],[550000000,0.30],[695000000,0.31],[910000000,0.32],[1400000000,0.33],[Infinity,0.34]
+    ],
+    'TK/1': [
+      [5850000,0],[6150000,0.0025],[6500000,0.005],[6900000,0.0075],[7400000,0.01],[8150000,0.0125],[9300000,0.015],[10500000,0.0175],[10900000,0.02],[11300000,0.0225],[11700000,0.025],[12050000,0.03],[12600000,0.035],[13500000,0.04],[14750000,0.05],[16050000,0.06],[17750000,0.07],[20350000,0.08],[24500000,0.09],[26650000,0.10],[28250000,0.11],[30200000,0.12],[32650000,0.13],[35750000,0.14],[39650000,0.15],[44250000,0.16],[48900000,0.17],[53150000,0.18],[58250000,0.19],[64100000,0.20],[70450000,0.21],[79350000,0.22],[90900000,0.23],[105300000,0.24],[127500000,0.25],[159000000,0.26],[208500000,0.27],[341000000,0.28],[456500000,0.29],[552500000,0.30],[697500000,0.31],[912500000,0.32],[1405000000,0.33],[Infinity,0.34]
+    ],
+    'TK/2': [
+      [6300000,0],[6500000,0.0025],[6850000,0.005],[7300000,0.0075],[7750000,0.01],[8750000,0.0125],[9750000,0.015],[10750000,0.0175],[11250000,0.02],[11600000,0.025],[12600000,0.03],[13600000,0.04],[14950000,0.05],[16400000,0.06],[18450000,0.07],[21850000,0.08],[26000000,0.09],[27700000,0.10],[29350000,0.11],[31450000,0.12],[33950000,0.13],[37100000,0.14],[41100000,0.15],[45800000,0.16],[49500000,0.17],[53800000,0.18],[58500000,0.19],[64000000,0.20],[71000000,0.21],[80000000,0.22],[93000000,0.23],[109000000,0.24],[129000000,0.25],[163000000,0.26],[211000000,0.27],[374000000,0.28],[459000000,0.29],[555000000,0.30],[704000000,0.31],[957000000,0.32],[1405000000,0.33],[Infinity,0.34]
+    ],
+    'TK/3': [
+      [6750000,0],[6850000,0.0025],[7350000,0.005],[7800000,0.0075],[8300000,0.01],[9150000,0.0125],[10250000,0.015],[11250000,0.0175],[11800000,0.02],[12450000,0.025],[13500000,0.03],[14500000,0.04],[15850000,0.05],[17350000,0.06],[19350000,0.07],[22750000,0.08],[27150000,0.09],[28850000,0.10],[30700000,0.11],[32700000,0.12],[35300000,0.13],[38600000,0.14],[42750000,0.15],[47600000,0.16],[51450000,0.17],[56500000,0.18],[61650000,0.19],[67650000,0.20],[75200000,0.21],[84650000,0.22],[98000000,0.23],[117500000,0.24],[143000000,0.25],[182000000,0.26],[236000000,0.27],[307000000,0.28],[454000000,0.29],[560000000,0.30],[676000000,0.31],[855000000,0.32],[1100000000,0.33],[1419000000,0.34],[Infinity,0.34]
+    ],
+    'K/0': [
+      [5850000,0],[6150000,0.0025],[6500000,0.005],[6900000,0.0075],[7400000,0.01],[8150000,0.0125],[9300000,0.015],[10500000,0.0175],[10900000,0.02],[11300000,0.0225],[11700000,0.025],[12050000,0.03],[12600000,0.035],[13500000,0.04],[14750000,0.05],[16050000,0.06],[17750000,0.07],[20350000,0.08],[24500000,0.09],[26650000,0.10],[28250000,0.11],[30200000,0.12],[32650000,0.13],[35750000,0.14],[39650000,0.15],[44250000,0.16],[48900000,0.17],[53150000,0.18],[58250000,0.19],[64100000,0.20],[70450000,0.21],[79350000,0.22],[90900000,0.23],[105300000,0.24],[127500000,0.25],[159000000,0.26],[208500000,0.27],[341000000,0.28],[456500000,0.29],[552500000,0.30],[697500000,0.31],[912500000,0.32],[1405000000,0.33],[Infinity,0.34]
+    ],
+    'K/1': [
+      [6300000,0],[6500000,0.0025],[6850000,0.005],[7300000,0.0075],[7750000,0.01],[8750000,0.0125],[9750000,0.015],[10750000,0.0175],[11250000,0.02],[11600000,0.025],[12600000,0.03],[13600000,0.04],[14950000,0.05],[16400000,0.06],[18450000,0.07],[21850000,0.08],[26000000,0.09],[27700000,0.10],[29350000,0.11],[31450000,0.12],[33950000,0.13],[37100000,0.14],[41100000,0.15],[45800000,0.16],[49500000,0.17],[53800000,0.18],[58500000,0.19],[64000000,0.20],[71000000,0.21],[80000000,0.22],[93000000,0.23],[109000000,0.24],[129000000,0.25],[163000000,0.26],[211000000,0.27],[374000000,0.28],[459000000,0.29],[555000000,0.30],[704000000,0.31],[957000000,0.32],[1405000000,0.33],[Infinity,0.34]
+    ],
+    'K/2': [
+      [6750000,0],[6850000,0.0025],[7350000,0.005],[7800000,0.0075],[8300000,0.01],[9150000,0.0125],[10250000,0.015],[11250000,0.0175],[11800000,0.02],[12450000,0.025],[13500000,0.03],[14500000,0.04],[15850000,0.05],[17350000,0.06],[19350000,0.07],[22750000,0.08],[27150000,0.09],[28850000,0.10],[30700000,0.11],[32700000,0.12],[35300000,0.13],[38600000,0.14],[42750000,0.15],[47600000,0.16],[51450000,0.17],[56500000,0.18],[61650000,0.19],[67650000,0.20],[75200000,0.21],[84650000,0.22],[98000000,0.23],[117500000,0.24],[143000000,0.25],[182000000,0.26],[236000000,0.27],[307000000,0.28],[454000000,0.29],[560000000,0.30],[676000000,0.31],[855000000,0.32],[1100000000,0.33],[1419000000,0.34],[Infinity,0.34]
+    ],
+    'K/3': [
+      [7200000,0],[7350000,0.0025],[7800000,0.005],[8250000,0.0075],[8900000,0.01],[9800000,0.0125],[10950000,0.015],[11950000,0.0175],[12550000,0.02],[13200000,0.03],[14400000,0.04],[15500000,0.05],[17050000,0.06],[18650000,0.07],[20750000,0.08],[24350000,0.09],[28750000,0.10],[30550000,0.11],[32350000,0.12],[34500000,0.13],[37500000,0.14],[40950000,0.15],[45250000,0.16],[50250000,0.17],[55850000,0.18],[61000000,0.19],[66700000,0.20],[74500000,0.21],[83200000,0.22],[95600000,0.23],[110000000,0.24],[134000000,0.25],[169000000,0.26],[221000000,0.27],[390000000,0.28],[463000000,0.29],[561000000,0.30],[709000000,0.31],[965000000,0.32],[1419000000,0.33],[Infinity,0.34]
+    ]
+  };
+
+  const fmt = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
+  const pct = (x) => (x*100).toFixed(2).replace(/\.00$/,'') + '%';
+  const roundRupiah = (n) => Math.round(n);
+
+  function terRate(ptkp, monthlyGross){
+    for (const [upper, rate] of terTables[ptkp]){
+      if (monthlyGross <= upper) return rate;
+    }
+    return 0.34;
+  }
+
+  function annualTaxPasal17(annualTaxable){
+    const brackets = [
+      [60000000, 0.05],
+      [250000000, 0.15],
+      [500000000, 0.25],
+      [5000000000, 0.30],
+      [Infinity, 0.35],
+    ];
+    let remaining = Math.max(0, annualTaxable);
+    let tax = 0;
+    let prev = 0;
+    for (const [limit, rate] of brackets){
+      const span = Math.min(remaining, limit - prev);
+      if (span > 0) tax += span * rate;
+      remaining -= span;
+      prev = limit;
+      if (remaining <= 0) break;
+    }
+    return roundRupiah(tax);
+  }
+
+  function getAnnualTaxable(annualGross, ptkp){
+    return Math.max(0, annualGross - ptkpMap[ptkp]);
+  }
+
+  function monthlyNetFromGross(gross, ptkp){
+    const annualGross = gross * 12;
+    const annualTax = annualTaxPasal17(getAnnualTaxable(annualGross, ptkp));
+    const monthlyTax = roundRupiah(annualTax / 12);
+    return { annualGross, annualTax, monthlyTax, monthlyNet: gross - monthlyTax };
+  }
+
+  function solveGrossUp(targetNet, ptkp){
+    let low = targetNet;
+    let high = targetNet * 2.5 + 1000000;
+    for (let i=0;i<70;i++){
+      const mid = (low + high) / 2;
+      const { monthlyNet } = monthlyNetFromGross(mid, ptkp);
+      if (monthlyNet < targetNet) low = mid; else high = mid;
+    }
+    const gross = roundRupiah(high);
+    const { annualTax, monthlyTax, monthlyNet } = monthlyNetFromGross(gross, ptkp);
+    return { gross, allowance: monthlyTax, monthlyNet, annualTax };
+  }
+
+  function buildMonthInputs(){
+    const grid = document.getElementById('monthGrid');
+    grid.innerHTML = '';
+    for (let i=1;i<=12;i++){
+      const div = document.createElement('div');
+      div.className = 'month-item';
+      div.innerHTML = `<div class="m">Bulan ${i}</div><input type="number" min="0" step="1000" id="m${i}" placeholder="Kosongkan untuk pakai bruto utama" />`;
+      grid.appendChild(div);
+    }
+  }
+
+  function getMonthlyIncome(index, fallback){
+    const el = document.getElementById('m' + index);
+    const v = el.value.trim();
+    return v === '' ? fallback : Number(v);
+  }
+
+  function switchTab(tab){
+    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + tab).classList.add('active');
+  }
+
+  function money(n){ return fmt.format(roundRupiah(n)); }
+
+  function recalc(){
+    const mode = document.getElementById('mode').value;
+    const ptkp = document.getElementById('ptkp').value;
+    const baseIncome = Number(document.getElementById('baseIncome').value || 0);
+    const annualBonus = Number(document.getElementById('annualBonus').value || 0);
+    const grossupMode = document.getElementById('taxborne').value;
+
+    document.getElementById('grossupBox').style.display = mode === 'grossup' ? 'block' : 'none';
+    document.getElementById('heroStatus').textContent = mode === 'grossup' ? 'Gross-Up aktif' : (mode === 'gross' ? 'Gross aktif' : 'TER aktif');
+    document.getElementById('heroStatusSub').textContent = mode === 'grossup'
+      ? 'Perusahaan menanggung pajak agar take-home tetap aman.'
+      : (mode === 'gross'
+        ? 'Pajak dipotong dari gaji karyawan seperti payroll normal.'
+        : 'Tarif efektif bulanan dipakai untuk 12 bulan.');
+
+    let totalGross = 0;
+    let totalTerTax = 0;
+    let tbody = '';
+    let currentRate = 0;
+    let currentBand = '';
+
+    for (let m=1; m<=12; m++){
+      const gross = Number(getMonthlyIncome(m, baseIncome) || 0);
+      const rate = terRate(ptkp, gross);
+      const tax = roundRupiah(gross * rate);
+      const net = gross - tax;
+
+      totalGross += gross;
+      totalTerTax += tax;
+
+      if (m === 1){
+        currentRate = rate;
+        currentBand = `Status ${ptkp} • bruto bulan pertama ${money(gross)}`;
+      }
+      tbody += `<tr><td>${m}</td><td>${money(gross)}</td><td>${pct(rate)}</td><td>${money(tax)}</td><td>${money(net)}</td></tr>`;
+    }
+
+    totalGross += annualBonus;
+    const finalAnnualTax = annualTaxPasal17(getAnnualTaxable(totalGross, ptkp));
+    const diff = totalTerTax - finalAnnualTax;
+    const avgRate = totalGross > 0 ? totalTerTax / totalGross : 0;
+
+    document.getElementById('terTable').innerHTML = tbody;
+    document.getElementById('terAnnualGross').textContent = money(totalGross);
+    document.getElementById('terAnnualTax').textContent = money(totalTerTax);
+    document.getElementById('terAvgRate').textContent = pct(avgRate);
+    document.getElementById('terAnnualNet').textContent = money(totalGross - totalTerTax);
+    document.getElementById('annualFinalTax').textContent = money(finalAnnualTax);
+    document.getElementById('annualDiff').textContent = (diff >= 0 ? '+ ' : '- ') + money(Math.abs(diff));
+    document.getElementById('annualDiff').style.color = diff >= 0 ? 'var(--good)' : 'var(--bad)';
+    document.getElementById('currentTerRate').textContent = pct(currentRate);
+    document.getElementById('currentTerBand').textContent = currentBand;
+
+    const gross = baseIncome;
+    const grossCalc = monthlyNetFromGross(gross, ptkp);
+    document.getElementById('grossGross').textContent = money(gross);
+    document.getElementById('grossTax').textContent = money(grossCalc.monthlyTax);
+    document.getElementById('grossNet').textContent = money(grossCalc.monthlyNet);
+    document.getElementById('grossAnnual').textContent = money(grossCalc.monthlyNet * 12);
+
+    const targetNet = baseIncome;
+    if (mode === 'grossup' || grossupMode === 'company'){
+      const gu = solveGrossUp(targetNet, ptkp);
+      document.getElementById('guTarget').textContent = money(targetNet);
+      document.getElementById('guGross').textContent = money(gu.gross);
+      document.getElementById('guAllowance').textContent = money(gu.allowance);
+      document.getElementById('guCost').textContent = money(gu.gross);
+      document.getElementById('guAllowance').style.color = 'var(--accent-2)';
+    } else {
+      document.getElementById('guTarget').textContent = money(targetNet);
+      document.getElementById('guGross').textContent = money(targetNet);
+      document.getElementById('guAllowance').textContent = money(0);
+      document.getElementById('guCost').textContent = money(targetNet);
+      document.getElementById('guAllowance').style.color = 'var(--text)';
+    }
+
+    const bar = document.getElementById('progressBar');
+    const taxRatio = totalGross > 0 ? Math.min(1, totalTerTax / totalGross) : 0;
+    bar.style.width = (taxRatio * 100).toFixed(1) + '%';
+    document.getElementById('barLabel').textContent = taxRatio < 0.1 ? 'Ringan' : taxRatio < 0.2 ? 'Sedang' : 'Lebih tinggi';
+
+    document.getElementById('stickyGross').textContent = money(totalGross);
+    document.getElementById('stickyTax').textContent = money(totalTerTax);
+    document.getElementById('stickyNet').textContent = money(totalGross - totalTerTax);
+    document.getElementById('stickyDiff').textContent = (diff >= 0 ? '+ ' : '- ') + money(Math.abs(diff));
+
+    document.getElementById('stickySummary').style.display = 'block';
+
+    if (mode === 'ter') switchTab('ter');
+    if (mode === 'gross') switchTab('gross');
+    if (mode === 'grossup') switchTab('grossup');
+  }
+
+  function fillExample(){
+    document.getElementById('mode').value = 'ter';
+    document.getElementById('ptkp').value = 'TK/0';
+    document.getElementById('baseIncome').value = 10000000;
+    document.getElementById('annualBonus').value = 5000000;
+    const vals = [10000000,10000000,10000000,10000000,10000000,12000000,10000000,10000000,10000000,10000000,10000000,20000000];
+    for (let i=1;i<=12;i++) document.getElementById('m'+i).value = vals[i-1];
+    recalc();
+  }
+
+  function resetMonths(){
+    for (let i=1;i<=12;i++) document.getElementById('m'+i).value = '';
+    recalc();
+  }
+
+  document.getElementById('mode').addEventListener('change', ()=>{
+    document.getElementById('grossupBox').style.display = document.getElementById('mode').value === 'grossup' ? 'block' : 'none';
+    recalc();
+  });
+  document.getElementById('ptkp').addEventListener('change', recalc);
+  document.getElementById('baseIncome').addEventListener('input', recalc);
+  document.getElementById('annualBonus').addEventListener('input', recalc);
+  document.getElementById('taxborne').addEventListener('change', recalc);
+
+  buildMonthInputs();
+  recalc();
+</script>
+</body>
+</html>
