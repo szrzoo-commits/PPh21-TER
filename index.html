@@ -11,6 +11,7 @@
     body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
     .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
     .result-card { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 20px 40px -10px rgba(37, 99, 235, 0.5); }
+    .ai-card { background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(79, 70, 229, 0.1) 100%); border: 1px solid rgba(139, 92, 246, 0.3); }
     input { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.2s; }
     input:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); }
     select { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.2s; }
@@ -19,6 +20,16 @@
     ::-webkit-scrollbar { width: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    
+    .spinner {
+      border: 3px solid rgba(255,255,255,0.1);
+      border-left-color: #a78bfa;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 <body class="min-h-screen p-4 md:p-8 antialiased">
@@ -169,7 +180,7 @@
           <h3 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
             <i data-lucide="pie-chart" class="w-4 h-4"></i> Ringkasan Analisis
           </h3>
-          <div class="space-y-3 text-sm">
+          <div class="space-y-3 text-sm mb-4">
             <div class="flex justify-between">
               <span class="text-slate-400">Total Bruto Setahun</span>
               <span class="font-medium text-white" id="resBruto">Rp 0</span>
@@ -189,6 +200,42 @@
           </div>
         </div>
 
+        <!-- NEW: AI ASSISTANT PANEL -->
+        <div class="glass-card ai-card rounded-2xl p-6 relative overflow-hidden">
+          <div class="absolute -top-10 -right-10 w-24 h-24 bg-purple-500 rounded-full mix-blend-multiply filter blur-2xl opacity-30"></div>
+          
+          <h3 class="text-sm font-semibold text-purple-300 mb-4 flex items-center gap-2">
+            <i data-lucide="sparkles" class="w-4 h-4"></i> Asisten AI Pajak & Keuangan
+          </h3>
+          
+          <!-- Quick Prompts -->
+          <div class="grid grid-cols-1 gap-2 mb-4">
+            <button onclick="askGemini('explain')" class="bg-purple-600/20 hover:bg-purple-600/40 text-purple-200 border border-purple-500/30 transition-all rounded-xl py-2.5 px-4 text-sm font-medium flex items-center justify-center gap-2">
+              ✨ Jelaskan Pajak Saya Singkat
+            </button>
+            <button onclick="askGemini('tips')" class="bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 border border-indigo-500/30 transition-all rounded-xl py-2.5 px-4 text-sm font-medium flex items-center justify-center gap-2">
+              ✨ Tips Kelola Gaji Netto Ini
+            </button>
+          </div>
+
+          <!-- Custom AI Input -->
+          <div class="relative mt-2">
+            <input type="text" id="customAiPrompt" class="w-full bg-slate-800/80 border border-purple-500/30 text-white text-sm rounded-xl py-3 pl-4 pr-12 focus:border-purple-400 transition-all placeholder:text-slate-500" placeholder="Tanya bebas soal pajak Anda...">
+            <button onclick="askGemini('custom')" class="absolute right-2 top-2 p-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors">
+              <i data-lucide="send" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- Output Container -->
+          <div id="aiOutputContainer" class="hidden mt-4 pt-4 border-t border-purple-500/20 text-sm text-slate-300">
+            <div id="aiLoading" class="flex flex-col items-center justify-center py-4 hidden">
+              <div class="spinner mb-3"></div>
+              <p class="text-purple-300 text-xs animate-pulse" id="aiLoadingText">AI sedang menganalisis profil Anda...</p>
+            </div>
+            <div id="aiContent" class="leading-relaxed"></div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -197,9 +244,120 @@
     // Inisialisasi Icon
     lucide.createIcons();
 
+    // GEMINI API INTEGRATION
+    const apiKey = ""; // Set your API Key via Environment
+    
+    async function fetchWithRetry(url, options, retries = 5) {
+      const delays = [1000, 2000, 4000, 8000, 16000];
+      for (let i = 0; i < retries; i++) {
+        try {
+          const response = await fetch(url, options);
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          return await response.json();
+        } catch (error) {
+          if (i === retries - 1) throw error;
+          await new Promise(res => setTimeout(res, delays[i]));
+        }
+      }
+    }
+
+    // Mendengarkan enter pada input kustom
+    document.getElementById('customAiPrompt').addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        askGemini('custom');
+      }
+    });
+
+    async function askGemini(action) {
+      const container = document.getElementById('aiOutputContainer');
+      const content = document.getElementById('aiContent');
+      const loading = document.getElementById('aiLoading');
+      const customInput = document.getElementById('customAiPrompt');
+
+      let customQueryText = "";
+      if (action === 'custom') {
+        customQueryText = customInput.value.trim();
+        if (!customQueryText) return; // Jangan lakukan apa-apa jika input kosong
+      }
+
+      // Tampilkan container dan loading
+      container.classList.remove('hidden');
+      content.innerHTML = '';
+      loading.classList.remove('hidden');
+
+      // Ambil konteks data dari aplikasi
+      const totalBruto = document.getElementById('resBruto').textContent;
+      const totalTax = document.getElementById('resTotalTax').textContent;
+      const totalTHP = document.getElementById('resTotalTHP').textContent;
+      const ptkpSelect = document.getElementById('ptkp');
+      const ptkpStr = ptkpSelect.options[ptkpSelect.selectedIndex].text;
+      const avgTax = document.getElementById('resAvgTax').textContent;
+      
+      if(totalBruto === "Rp 0") {
+          loading.classList.add('hidden');
+          content.innerHTML = `<span class="text-yellow-400">Silakan masukkan angka penghasilan Anda terlebih dahulu di sebelah kiri agar AI bisa memberikan analisis.</span>`;
+          return;
+      }
+
+      let promptText = "";
+      
+      // Susun prompt berdasarkan interaksi
+      if (action === 'explain') {
+        promptText = `Sebagai konsultan pajak dari Indonesia, jelaskan rincian ini dengan bahasa santai, mudah dimengerti, tanpa jargon rumit. Profil: Total Bruto Setahun ${totalBruto}, Status PTKP ${ptkpStr}. PPh 21 Setahun: ${totalTax}, Take Home Pay: ${totalTHP}. Mengapa pajaknya sebesar itu dan apa yang perlu diketahui karyawan tentang hal ini? Batasi 2 paragraf singkat.`;
+      } else if (action === 'tips') {
+        promptText = `Sebagai perencana keuangan handal di Indonesia, berikan 3 tips cerdas dan praktis untuk mengatur gaji tahunan bersih (Take Home Pay) sebesar ${totalTHP} (Pajak bulanan dipotong sekitar ${avgTax}). Sertakan contoh alokasi persentase dana (seperti tabungan, hiburan, investasi). Gunakan bahasa kasual, ramah, dan berikan poin-poin yang mudah dibaca.`;
+      } else if (action === 'custom') {
+        promptText = `Konteks Profil Keuangan Pengguna saat ini:
+- Total Bruto Setahun: ${totalBruto}
+- Status PTKP: ${ptkpStr}
+- Total Potongan Pajak PPh 21 Setahun: ${totalTax}
+- Total Gaji Bersih / Take Home Pay (Setahun): ${totalTHP}
+
+Berdasarkan konteks spesifik di atas, tolong jawab pertanyaan pengguna berikut ini secara profesional, akurat, dan ramah sebagai Konsultan Keuangan/Pajak Indonesia. 
+Pertanyaan: "${customQueryText}"
+
+Jawab dengan ringkas (maksimal 3 paragraf).`;
+        
+        // Bersihkan input setelah request dikirim
+        customInput.value = '';
+      }
+
+      const payload = {
+        contents: [{ parts: [{ text: promptText }] }],
+        systemInstruction: { 
+            parts: [{ text: "Anda adalah Asisten Pajak & Keuangan Indonesia yang sangat pintar. Gunakan bahasa Indonesia santai namun profesional. Berikan format yang rapi menggunakan bullet points atau paragraf pendek. Bold tulisan yang penting menggunakan **." }] 
+        }
+      };
+
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const result = await fetchWithRetry(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text || "Maaf, AI tidak dapat merespon saat ini.";
+        
+        // Konversi Markdown standar (bold, italic, list) menjadi HTML
+        let htmlText = textResponse
+            .replace(/\*\*(.*?)\*\*/g, '<strong class="text-purple-200">$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em class="text-slate-400">$1</em>')
+            .replace(/\n\*/g, '<br><span class="text-purple-400 mr-2">•</span>')
+            .replace(/\n-/g, '<br><span class="text-purple-400 mr-2">•</span>')
+            .replace(/\n/g, '<br>');
+
+        content.innerHTML = htmlText;
+      } catch (error) {
+        content.innerHTML = `<span class="text-red-400">Terjadi kesalahan saat memanggil AI. Coba beberapa saat lagi.</span>`;
+      } finally {
+        loading.classList.add('hidden');
+      }
+    }
+
+    // --- LOGIKA KALKULATOR PAJAK ---
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
     
-    // Render 12 Bulan Inputs
     const monthGrid = document.getElementById('monthGrid');
     let monthInputsHtml = '';
     for(let i=1; i<=12; i++) {
@@ -212,7 +370,6 @@
     }
     monthGrid.innerHTML = monthInputsHtml;
 
-    // Formatting Uang
     function format(num) {
       return new Intl.NumberFormat('id-ID').format(Math.round(num));
     }
@@ -225,7 +382,6 @@
       input.value = val === 0 ? '' : format(val);
     }
 
-    // Sinkronisasi Gaji Pokok ke 12 Bulan (hanya jika kosong atau sama)
     function syncMonths() {
       const base = parseFormat(document.getElementById('baseIncome').value);
       const allowances = parseFormat(document.getElementById('allowances')?.value);
@@ -239,7 +395,6 @@
         let el = document.getElementById(`m${i}`);
         el.value = totalMonthly === 0 ? '' : format(totalMonthly);
       }
-      lucide.createIcons(); // merefresh icon jika perlu
     }
 
     function resetMonths() {
@@ -250,36 +405,30 @@
       document.getElementById('insurance').value = '';
       document.getElementById('natura').value = '';
       for(let i=1; i<=12; i++) document.getElementById(`m${i}`).value = '';
+      
+      document.getElementById('aiOutputContainer').classList.add('hidden');
+      document.getElementById('customAiPrompt').value = '';
       calculate();
     }
 
-    // Kalkulasi PPh 17 (Progressive)
     function calcPPh17(pkp) {
       if (pkp <= 0) return 0;
       let tax = 0;
       let sisa = pkp;
-      
       const layers = [
         { max: 60000000, rate: 0.05 },
-        { max: 190000000, rate: 0.15 }, // 60jt -> 250jt
-        { max: 250000000, rate: 0.25 }, // 250jt -> 500jt
-        { max: 4500000000, rate: 0.30 }, // 500jt -> 5M
-        { max: Infinity, rate: 0.35 }    // > 5M
+        { max: 190000000, rate: 0.15 }, 
+        { max: 250000000, rate: 0.25 }, 
+        { max: 4500000000, rate: 0.30 }, 
+        { max: Infinity, rate: 0.35 }    
       ];
-
       for (let layer of layers) {
-        if (sisa > layer.max) {
-          tax += layer.max * layer.rate;
-          sisa -= layer.max;
-        } else {
-          tax += sisa * layer.rate;
-          break;
-        }
+        if (sisa > layer.max) { tax += layer.max * layer.rate; sisa -= layer.max; } 
+        else { tax += sisa * layer.rate; break; }
       }
       return tax;
     }
 
-    // Main Engine
     function calculate() {
       const mode = document.getElementById('mode').value;
       const ptkp = parseFloat(document.getElementById('ptkp').value);
@@ -290,24 +439,19 @@
       let monthlyTaxes = [];
       let totalTaxPaid = 0;
 
-      // Kumpulkan data bulanan
       for(let i=1; i<=12; i++){
         let brutoBulan = parseFormat(document.getElementById(`m${i}`).value);
         totalBruto += brutoBulan;
 
-        // Hitung Biaya Jabatan
         let bjBulan = Math.min(brutoBulan * 0.05, 500000);
         totalBiayaJabatan += bjBulan;
 
-        // Simulasi TER per bulan (Disini menggunakan estimasi standar PPh 17 dibagi rata untuk demo, 
-        // karena tabel asli TER sangat panjang. Jika Gross-Up/Gross, ini dihitung normal)
         let taxBulan = 0;
         let pkpEstimasi = Math.max(0, ((brutoBulan - bjBulan) * 12) - ptkp);
         
         if(mode === 'ter' || mode === 'gross') {
              taxBulan = calcPPh17(pkpEstimasi) / 12;
         } else if (mode === 'grossup') {
-             // Gross-up aproksimasi
              taxBulan = (calcPPh17(pkpEstimasi) / 12) * 1.05; 
         }
 
@@ -317,12 +461,10 @@
         }
       }
 
-      // Hitung Biaya Jabatan dari Bonus
       let bjBonus = Math.min(bonus * 0.05, 6000000 - totalBiayaJabatan);
       if(bjBonus < 0) bjBonus = 0;
       totalBiayaJabatan += bjBonus;
 
-      // Total Akhir Tahunan
       let netto = totalBruto - totalBiayaJabatan;
       let pkp = Math.floor((netto - ptkp) / 1000) * 1000; 
       if (pkp < 0) pkp = 0;
@@ -330,19 +472,16 @@
       let taxTotalTahunan = calcPPh17(pkp);
       
       if(mode === 'grossup'){
-          // Hitung ulang PKP dengan tunjangan pajak (iterasi sederhana)
           let pkpGrossUp = Math.floor((netto + taxTotalTahunan - ptkp) / 1000) * 1000;
           taxTotalTahunan = calcPPh17(pkpGrossUp);
       }
 
-      // Pajak Desember (Total setahun - yang sudah dibayar Jan-Nov)
       let taxDesember = Math.max(0, taxTotalTahunan - totalTaxPaid);
       monthlyTaxes.push(taxDesember);
 
       let thp = totalBruto - taxTotalTahunan;
-      if(mode === 'grossup') thp = totalBruto; // Pajak ditanggung
+      if(mode === 'grossup') thp = totalBruto; 
 
-      // Update UI
       document.getElementById('resTotalTax').textContent = 'Rp ' + format(taxTotalTahunan);
       document.getElementById('resTotalTHP').textContent = 'Rp ' + format(thp);
       document.getElementById('resAvgTax').textContent = 'Rp ' + format(totalTaxPaid / 11 || 0);
@@ -354,7 +493,6 @@
       document.getElementById('resTaxDec').textContent = 'Rp ' + format(taxDesember);
     }
 
-    // Init
     calculate();
   </script>
 </body>
